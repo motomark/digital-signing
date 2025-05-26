@@ -41,6 +41,8 @@ public class SignatureAuthenticationFilter extends OncePerRequestFilter {
 
         // 2. This is the key id in our keystore map to the public key.
         String keyId = request.getHeader("X-Key-Id");
+
+        // 3. This is the date when the request was sent.
         String dateHeader = request.getHeader("Date");
 
         if (signatureHeader == null || keyId == null || dateHeader == null) {
@@ -48,7 +50,10 @@ public class SignatureAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // 4. Re-create the signing string in the same way as the client before signing.
         String signingString = request.getMethod() + "\n" + request.getRequestURI() + "\n" + dateHeader;
+
+        // 5. Obtain the public key from the keystore.
         PublicKey publicKey = keyStore.getPublicKey(keyId);
 
         if (publicKey == null) {
@@ -58,10 +63,14 @@ public class SignatureAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             Signature sig = Signature.getInstance("SHA256withRSA");
+            // 6. Set the public key ready for verification.
             sig.initVerify(publicKey);
+            
+            // 7. use the signing string.
             sig.update(signingString.getBytes(StandardCharsets.UTF_8));
-            //System.out.println("Sig verify: "+new String(sig.sign()));
-
+            
+            // 8. Perform the validation e.g. pass in the signature we received in the request (decode it first) and verify that 
+            // decrypting with the expected public key we get a matching signature.
             boolean valid = sig.verify(Base64.getDecoder().decode(signatureHeader));
 
             if (!valid) {
